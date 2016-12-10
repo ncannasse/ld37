@@ -1,0 +1,10 @@
+-cp src
+-cp lib
+-swf ld37.swf
+-swf-header 1024:652:60:000000
+-swf-version 15.0
+-main Game
+-lib heaps
+-lib castle
+-dce full
+-lib air3
