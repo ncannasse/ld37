@@ -41,6 +41,8 @@ class Door extends Entity {
 				opening += 0.04 * dt;
 				if( opening > 1 ) {
 					opening = 1;
+//					if( game.step == 5 )
+//						y++;
 					onChange();
 				}
 			}
@@ -49,8 +51,17 @@ class Door extends Entity {
 				opening -= 0.02 * dt;
 				if( opening < 0 ) {
 					opening = 0;
+//					if( game.step == 6 )
+//						y--;
 					onChange();
 				}
+				switch( game.step ) {
+				case 5:
+					x += dt * 2;
+				case 6:
+					x -= dt * 2;
+				}
+
 			}
 		}
 

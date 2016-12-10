@@ -14,11 +14,20 @@ class Pic extends Entity {
 		play(ANIM);
 		anim.speed = 0;
 		anim.loop = false;
+		anim.alpha = 0;
+		game.event.waitUntil(function(dt) {
+			anim.alpha += ((x + 100) / 4000) * dt;
+			if( anim.alpha > 1 ) {
+				anim.alpha = 1;
+				return true;
+			}
+			return false;
+		});
 	}
 
 	public function hit() {
 		anim.speed = 20;
-		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.click.play();
+		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
 	}
 
 	public function hide(onEnd) {
@@ -26,7 +35,7 @@ class Pic extends Entity {
 		var a = ANIM.copy();
 		a.reverse();
 		play(a, null, onEnd);
-		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.click.play();
+		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
 	}
 
 }

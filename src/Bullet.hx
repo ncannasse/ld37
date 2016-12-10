@@ -1,5 +1,7 @@
 class Bullet extends Entity {
 
+	var speed = 1 + hxd.Math.srand(0.1);
+
 	public function new() {
 		super();
 		var t = h2d.Tile.fromColor(Game.DARK, 3, 3);
@@ -14,7 +16,7 @@ class Bullet extends Entity {
 				remove();
 				break;
 			}
-			y -= dt;
+			y -= dt * speed;
 
 			if( y < -5 ) {
 				remove();

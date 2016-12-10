@@ -66,8 +66,6 @@ class Hero extends Entity {
 				play(anims.sleepDead);
 			default:
 			}
-			game.event.wait(1, function() {
-			});
 		case Lock:
 		}
 		return state = s;
@@ -75,11 +73,16 @@ class Hero extends Entity {
 
 	public function die(x, y, dx = 0., dy = -1.) {
 		if( state == Die ) return;
+		hxd.Res.die.play();
 		new Blood(x,y, dx, dy);
 		state = Die;
 	}
 
 	override public function update(dt:Float) {
+
+
+		anim.rotation = -game.rotate.rotation;
+
 
 		switch( state ) {
 		case Sleep:
@@ -99,6 +102,7 @@ class Hero extends Entity {
 				dy--;
 			if( K.isDown(K.DOWN) )
 				dy++;
+
 			if( dx != 0 ) {
 				anim.scaleX = dx * anim.scaleY;
 				anim.frames = anims.walk;
@@ -106,7 +110,7 @@ class Hero extends Entity {
 				anim.frames = dy > 0 ? anims.walkDown : anims.walkUp;
 
 			if( dx == 0 && dy == 0 )
-				anim.currentFrame = 0.4999;
+				anim.currentFrame = 0.4;
 
 			var cs = Math.cos(anim.rotation);
 			var ss = Math.sin(anim.rotation);
