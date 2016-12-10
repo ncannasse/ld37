@@ -107,8 +107,18 @@ class Hero extends Entity {
 
 			if( dx == 0 && dy == 0 )
 				anim.currentFrame = 0.4999;
-			var mx = dx * dt * 1.5;
-			var my = dy * dt * 1.5;
+
+			var cs = Math.cos(anim.rotation);
+			var ss = Math.sin(anim.rotation);
+
+			var mx = dx * cs - dy * ss;
+			var my = dx * ss + dy * cs;
+
+			var ms = dt * 1.5;
+			mx *= ms;
+			my *= ms;
+
+
 			for( i in 0...4 ) {
 				var mx = mx * 0.25;
 				var my = my * 0.25;
@@ -117,12 +127,14 @@ class Hero extends Entity {
 				if( !game.hasCollide(x-2, y+my - (dy<0?4:0)) && !game.hasCollide(x, y+my - (dy<0?4:0)) && !game.hasCollide(x+2, y+my - (dy<0?4:0)) )
 					y += my;
 			}
+			if( game.hasCollide(x, y) || K.isPressed(K.ESCAPE) )
+				die(x, y);
 		case Lock:
 		case Die:
 			if( K.isPressed(K.SPACE) || K.isPressed(K.ESCAPE) ) {
 				state = Lock;
 				game.dieCount++;
-				haxe.Timer.delay(game.startScenario, 0);
+				haxe.Timer.delay(function() game.startScenario(), 0);
 			}
 		}
 

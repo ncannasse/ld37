@@ -51,6 +51,7 @@ class CustomRenderer extends h2d.RenderContext {
 
 		var bg = allocTarget("bg");
 		pushTarget(bg);
+		clear(0xFFFFFF);
 		super.drawScene();
 		popTarget();
 
@@ -80,27 +81,39 @@ class Game extends hxd.App {
 	public var hero : Hero;
 	public var door : Door;
 	public var tiles : h2d.Tile;
-	public var bitmap : hxd.Pixels.PixelsARGB;
-	public var collide : hxd.Pixels.PixelsARGB;
+	public var bitmap : hxd.Pixels;
+	public var collide : hxd.Pixels;
 	public var event : hxd.WaitEvent;
 
 	public var tf : h2d.Text;
 	public var dieCount = 0;
 
+	public var roomTex : h3d.mat.Texture;
+	public var root : h2d.Layers;
+
 	var step : Int;
+	var rotate : h2d.Sprite;
 
 	override function init() {
 		s2d.setFixedSize(512, 326);
 
-		new h2d.Bitmap(hxd.Res.room.toTile(), s2d);
+
+		rotate = new h2d.Sprite(s2d);
+		root = new h2d.Layers(rotate);
+		root.x = -s2d.width >> 1;
+		root.y = -s2d.height >> 1;
+		rotate.x = -root.x;
+		rotate.y = -root.y;
+
+		roomTex = hxd.Res.room.toTexture().clone();
+		var room = new h2d.Bitmap(h2d.Tile.fromTexture(roomTex), root);
 		tiles = hxd.Res.anims.toTile();
 		bitmap = hxd.Res.anims.getPixels();
-		collide = hxd.Res.room.getPixels();
 
 		var c = new CustomRenderer(s2d);
 		s2d.renderer = c;
 
-		startScenario();
+		startScenario(3);
 	}
 
 
@@ -110,16 +123,22 @@ class Game extends hxd.App {
 		return collide.getPixel(x, y) != 0xFFF9F7F7;
 	}
 
-	public function text(t) {
-	}
+	public function startScenario(step = 0) {
+		this.step = step;
 
-
-	public function startScenario() {
+		collide = hxd.Res.room.getPixels();
+		roomTex.uploadPixels(collide);
 
 		for( e in entities.copy() )
 			e.remove();
 
 		event = new hxd.WaitEvent();
+
+		event.waitUntil(function(dt) {
+			rotate.rotation = hxd.Math.angleMove(rotate.rotation, 0, 0.03 * dt);
+			hero.anim.rotation = -rotate.rotation;
+			return rotate.rotation == 0;
+		});
 
 		hero = new Hero();
 		hero.x = 222;
@@ -129,7 +148,11 @@ class Game extends hxd.App {
 		door.x = 175;
 		door.y = 276;
 
-		step = 1;
+		if( step > 0 ) {
+			hero.state = Move;
+			hero.y += 50;
+		}
+
 		nextScenario();
 	}
 
@@ -143,8 +166,6 @@ class Game extends hxd.App {
 			hxd.Res.tonals.play();
 			event.wait(2, function() {
 
-				text("Evade!");
-
 				door.open = true;
 				door.onChange = function() {
 
@@ -157,64 +178,130 @@ class Game extends hxd.App {
 						});
 					}
 
-					event.wait(3, nextScenario);
+					door.onChange = nextScenario;
+					event.wait(2, function() door.open = false);
 
 				};
 			});
 		case 1:
 
-			hxd.Res.vibrate.play();
-			var mid = Std.int(s2d.width / 32) + Std.random(7) - 3;
-			var all = [];
-			for( x in 0...Std.int(s2d.width / 16) ) {
-				if( x == mid ) continue;
-				for( y in 0...Std.int(s2d.height/16) ) {
-					if( !hasCollide(x * 16 + 4, y * 16 + 4) && !hasCollide(x * 16 + 12, y* 16 + 12) ) {
-						var p = new Pic(x * 16 + 8, y * 16 + 8);
-						event.wait( 2 - Math.abs(x - mid) * 0.1, p.hit);
-						all.push(p);
-					}
-				}
-			}
+			showPics(Std.int(s2d.width / 32) + Std.random(7) - 3, true);
 
-			var endKill = false;
-			event.waitUntil(function(_) {
-				var xMin = 0.;
-				var xMax = 1000.;
+		case 2:
 
-				for( p in all )
-					if( p.active ? (p.anim.currentFrame > 3) : (p.anim.currentFrame < p.anim.frames.length - 3) ) {
-						var x = (p.x - 8) / 16;
-						if( x < mid ) {
-							if( xMin < x ) xMin = x;
-						} else {
-							if( xMax > x ) xMax = x;
+			showPics( 4 + Std.random(3), false );
+			event.wait(5, nextScenario);
+
+		case 3:
+
+			hxd.Res.cygal.play();
+
+			event.wait(0.1, function() {
+				var dx = 0.;
+				var k = 0;
+				var room = hxd.Res.room.getPixels().sub(0, 0, 250, collide.height);
+				event.waitUntil(function(dt) {
+					dx += dt * 2;
+					var change = false;
+					while( dx > 1 ) {
+						k++;
+						if( k > 150 ) {
+							k = -1;
+							nextScenario();
+							break;
 						}
+						dx--;
+						collide.blit(k, 0, room, 0, 0, room.width, room.height);
+						change = true;
 					}
-				if( hero.x < (xMin + 1) * 16 || hero.x > xMax * 16 ) {
-					hero.die(hero.x, hero.y);
-					return true;
-				}
-
-				return endKill;
+					if( change )
+						roomTex.uploadPixels(collide);
+					return k < 0;
+				});
 			});
 
-			event.wait(3, function() {
-				for( p in all )
-					event.wait( hxd.Math.abs(p.x / 16 - mid) * 0.1, p.hide.bind(function() {
-						p.remove();
-						all.remove(p);
-						if( all.length == 0 ) {
-							endKill = true;
-							if( dieCount > 3 && Std.random(3) == 0 ) step--;
-							event.wait(1, nextScenario);
-						}
-					}));
-			});
 
+		case 4:
+
+			var speed = 0.03;
+			event.waitUntil(function(dt) {
+
+
+				var p = root.localToGlobal(new h2d.col.Point(hero.x, hero.y));
+				rotate.rotation += speed * dt;
+
+				var dx = (p.x - s2d.width * 0.5);
+				var dy = (p.y - s2d.height * 0.5);
+
+				// centrifuge
+				if( hero.state == Die )
+					speed *= 0.95;
+				else {
+					p.x += dx * 0.01 * dt;
+					p.y += dy * 0.01 * dt;
+
+					p = root.globalToLocal(p);
+					hero.x = p.x;
+					hero.y = p.y;
+				}
+				hero.anim.rotation = -rotate.rotation;
+
+				return false;
+			});
 
 
 		}
+	}
+
+	function showPics( mid : Int, auto : Bool ) {
+		var all = [];
+		for( x in 0...Std.int(s2d.width / 16) ) {
+			if( x == mid ) continue;
+			for( y in 0...Std.int(s2d.height/16) ) {
+				if( !hasCollide(x * 16 + 4, y * 16 + 4) && !hasCollide(x * 16 + 12, y* 16 + 12) ) {
+					var p = new Pic(x * 16 + 8, y * 16 + 8);
+					event.wait( 2 - Math.abs(x - mid) * 0.1, p.hit);
+					all.push(p);
+				}
+			}
+		}
+
+		var endKill = false;
+		event.waitUntil(function(_) {
+			var xMin = 0.;
+			var xMax = 1000.;
+
+			for( p in all )
+				if( p.active ? (p.anim.currentFrame > 3) : (p.anim.currentFrame < p.anim.frames.length - 3) ) {
+					var x = (p.x - 8) / 16;
+					if( x < mid ) {
+						if( xMin < x ) xMin = x;
+					} else {
+						if( xMax > x ) xMax = x;
+					}
+				}
+			if( hero.x < (xMin + 1) * 16 || hero.x > xMax * 16 ) {
+				hero.die(hero.x, hero.y);
+				return true;
+			}
+
+			return endKill;
+		});
+
+		event.wait(3, function() {
+			for( p in all )
+				event.wait( hxd.Math.abs(p.x / 16 - mid) * 0.1, p.hide.bind(function() {
+					p.remove();
+					all.remove(p);
+					if( all.length == 0 ) {
+						endKill = true;
+						if( auto ) {
+							if( dieCount > 3 && Std.random(3) == 0 ) step--;
+							event.wait(1, nextScenario);
+						}
+					}
+				}));
+		});
 	}
 
 

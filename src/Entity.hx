@@ -9,7 +9,7 @@ class Entity {
 	public function new() {
 		game = Game.inst;
 		anim = new h2d.Anim();
-		game.s2d.add(anim, 2);
+		game.root.add(anim, 2);
 		game.entities.push(this);
 	}
 

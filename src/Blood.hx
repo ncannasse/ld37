@@ -52,7 +52,7 @@ class Blood extends Entity {
 		play(null);
 
 		b = new h2d.SpriteBatch(game.tiles);
-		game.s2d.add(b, 1);
+		game.root.add(b, 1);
 		b.hasUpdate = true;
 		b.blendMode = Multiply;
 		var frames = [for( dy in 0...2 ) [for( t in game.tiles.sub(0, 64+dy*16, 112, 16).split() ) { t.dx = -8; t.dy = -8; t; }]];
@@ -74,7 +74,7 @@ class Blood extends Entity {
 			e.vz = -(0.5 + hxd.Math.random(1)) * 3;
 			parts.add(e);
 		}
-		game.s2d.add(anim, 3); // over
+		game.root.add(anim, 3); // over
 
 		this.x = b.x = x;
 		this.y = b.y = y;
@@ -83,6 +83,9 @@ class Blood extends Entity {
 	override public function remove() {
 		super.remove();
 		b.remove();
+	}
+
+	override public function update(dt:Float) {
 	}
 
 }

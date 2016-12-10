@@ -8,3 +8,4 @@
 -lib castle
 -dce full
 -lib air3
+-D native-trace
