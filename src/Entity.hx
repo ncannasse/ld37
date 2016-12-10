@@ -1,7 +1,7 @@
 class Entity {
 
 	var game : Game;
-	var anim : h2d.Anim;
+	public var anim : h2d.Anim;
 
 	public var x(get, set) : Float;
 	public var y(get,set) : Float;
@@ -50,8 +50,7 @@ class Entity {
 		if( (game.bitmap.getPixel(f.x + ix, f.y + iy) >>> 24) == 0 )
 			return false;
 
-		new Blood(hx + ix, hy + iy, dx, dy);
-		game.hero.state = Die;
+		game.hero.die(hx + ix, hy + iy, dx, dy);
 
 		return true;
 	}

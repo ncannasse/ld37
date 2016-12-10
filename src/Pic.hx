@@ -3,7 +3,7 @@ class Pic extends Entity {
 
 	static var ANIM;
 
-	var active = false;
+	public var active = true;
 
 	public function new(x, y){
 		super();
@@ -22,22 +22,11 @@ class Pic extends Entity {
 	}
 
 	public function hide(onEnd) {
+		active = false;
 		var a = ANIM.copy();
 		a.reverse();
 		play(a, null, onEnd);
 		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.click.play();
 	}
-
-	override public function update(dt:Float) {
-		if( anim.speed == 0 || active )
-			return;
-		for( dx in -2...3 )
-			for( dy in -2...3 )
-				if( checkHitHero(dx * 3, dy * 3) ) {
-					active = true;
-					return;
-				}
-	}
-
 
 }

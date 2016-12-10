@@ -129,7 +129,7 @@ class Game extends hxd.App {
 		door.x = 175;
 		door.y = 276;
 
-		step = 0;
+		step = 1;
 		nextScenario();
 	}
 
@@ -176,12 +176,36 @@ class Game extends hxd.App {
 					}
 				}
 			}
+
+			var endKill = false;
+			event.waitUntil(function(_) {
+				var xMin = 0.;
+				var xMax = 1000.;
+
+				for( p in all )
+					if( p.active ? (p.anim.currentFrame > 3) : (p.anim.currentFrame < p.anim.frames.length - 3) ) {
+						var x = (p.x - 8) / 16;
+						if( x < mid ) {
+							if( xMin < x ) xMin = x;
+						} else {
+							if( xMax > x ) xMax = x;
+						}
+					}
+				if( hero.x < (xMin + 1) * 16 || hero.x > xMax * 16 ) {
+					hero.die(hero.x, hero.y);
+					return true;
+				}
+
+				return endKill;
+			});
+
 			event.wait(3, function() {
 				for( p in all )
 					event.wait( hxd.Math.abs(p.x / 16 - mid) * 0.1, p.hide.bind(function() {
 						p.remove();
 						all.remove(p);
 						if( all.length == 0 ) {
+							endKill = true;
 							if( dieCount > 3 && Std.random(3) == 0 ) step--;
 							event.wait(1, nextScenario);
 						}

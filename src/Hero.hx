@@ -73,6 +73,12 @@ class Hero extends Entity {
 		return state = s;
 	}
 
+	public function die(x, y, dx = 0., dy = -1.) {
+		if( state == Die ) return;
+		new Blood(x,y, dx, dy);
+		state = Die;
+	}
+
 	override public function update(dt:Float) {
 
 		switch( state ) {
