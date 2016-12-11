@@ -23,10 +23,12 @@ class Composite extends h3d.shader.ScreenShader {
 
 		@param var bg : Sampler2D;
 		@param var persist : Sampler2D;
+		@const var inverse : Bool;
 
 		function fragment() {
 			var uv = input.uv;
-			output.color = mix( bg.get(uv) , persist.get(uv), 0.2 );
+			var c = mix( bg.get(uv) , persist.get(uv), 0.2 );
+			output.color = inverse ? 1 - c : c;
 		}
 
 	}
@@ -36,7 +38,7 @@ class Composite extends h3d.shader.ScreenShader {
 @:access(h2d.Sprite)
 class CustomRenderer extends h2d.RenderContext {
 
-	var fx : h3d.pass.ScreenFx<Composite>;
+	public var fx : h3d.pass.ScreenFx<Composite>;
 	var merge : h3d.pass.ScreenFx<Merge>;
 	var blur : h3d.pass.Blur;
 
@@ -96,6 +98,8 @@ class Game extends hxd.App {
 	public var seq : Int = 0;
 	public var step : Int;
 
+	public var custom : CustomRenderer;
+
 	var music : hxd.snd.Channel;
 
 	override function init() {
@@ -111,6 +115,15 @@ class Game extends hxd.App {
 		rotate.y = -root.y;
 
 		roomTex = hxd.Res.room.toTexture().clone();
+
+		var carpet = new h2d.Bitmap(hxd.Res.carpet.toTile(), root);
+		carpet.x = 185;
+		carpet.y = 40;
+
+		var carpet2 = new h2d.Bitmap(hxd.Res.carpet.toTile(), root);
+		carpet2.x = 330;
+		carpet2.y = 40;
+
 		var room = new h2d.Bitmap(h2d.Tile.fromTexture(roomTex), root);
 		tiles = hxd.Res.anims.toTile();
 		bitmap = hxd.Res.anims.getPixels();
@@ -121,11 +134,12 @@ class Game extends hxd.App {
 		tf.filters = [new h2d.filter.Glow(DARK,0.8)];
 		tf.letterSpacing = 3;
 
-		var c = new CustomRenderer(s2d);
-		s2d.renderer = c;
+		custom = new CustomRenderer(s2d);
+		s2d.renderer = custom;
 
 		#if debug
 		seq = 4;
+		custom.fx.shader.inverse = true;
 		startScenario();
 		#else
 		startScenario();
@@ -137,7 +151,7 @@ class Game extends hxd.App {
 	public function hasCollide(x:Float, y:Float) {
 		var x = Std.int(x);
 		var y = Std.int(y);
-		return collide.getPixel(x, y) != BG;
+		return collide.getPixel(x, y)>>>24 != 0;
 	}
 
 	public function startScenario(step = -1) {
@@ -147,7 +161,7 @@ class Game extends hxd.App {
 
 		if( seq > 1 ) {
 			// smaller room
-			var room = collide.sub(0, 0, 250, collide.height);
+			var room = collide.sub(0, 0, 245, collide.height);
 			for( i in 0...150 )
 				collide.blit(i, 0, room, 0, 0, room.width, room.height);
 			roomTex.dispose();
@@ -254,15 +268,15 @@ class Game extends hxd.App {
 		tf.x = Std.int((s2d.width - tf.textWidth) * 0.5);
 		tf.text = "";
 		var t = 0.;
-		var speed = 0.2;
+		var speed = 0.3;
 		var prev = 0;
 		var talk = [hxd.Res.talk4];
 		event.waitUntil(function(dt) {
-			t += dt * 0.2;
+			t += dt * speed;
 			var k = Std.int(t);
 			if( k != prev && prev < str.length ) {
 				prev = k;
-				if( str.charCodeAt(k) != " ".code )
+				if( str.charCodeAt(k) != " ".code && str.charCodeAt(k) != ".".code )
 					talk[Std.random(talk.length)].play();
 				tf.text = str.substr(0, k);
 			}
@@ -329,7 +343,7 @@ class Game extends hxd.App {
 				hxd.Res.wall.play();
 				var dx = 0.;
 				var k = 0;
-				var room = hxd.Res.room.getPixels().sub(0, 0, 250, collide.height);
+				var room = hxd.Res.room.getPixels().sub(0, 0, 245, collide.height);
 				event.waitUntil(function(dt) {
 					dx += dt * 2;
 					var change = false;
@@ -481,10 +495,13 @@ class Game extends hxd.App {
 	public static var inst : Game;
 
 	static function main() {
+		#if debug
 		hxd.Res.initLocal();
 		Std.instance(hxd.Res.loader.fs, hxd.fs.LocalFileSystem).createMP3 = true;
 		hxd.res.Resource.LIVE_UPDATE = true;
-		//Data.load(hxd.Res.data.entry.getText());
+		#else
+		hxd.Res.initEmbed({compressSounds:true});
+		#end
 		inst = new Game();
 	}
 

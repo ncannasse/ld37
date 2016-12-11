@@ -25,6 +25,7 @@ class Hero extends Entity {
 
 	var dirX = 0;
 	var dirY = 0;
+	var lastTextEnd = 0.;
 
 	public function new() {
 		super();
@@ -59,7 +60,10 @@ class Hero extends Entity {
 		case Sleep:
 			play(anims.sleep, 4);
 		case Move:
-			play(anims.walkDown, 20);
+			if( state == Lock )
+				anim.speed = 20;
+			else
+				play(anims.walkDown, 20);
 		case Die:
 			switch( state ) {
 			case Move, Lock:
@@ -70,6 +74,10 @@ class Hero extends Entity {
 			default:
 			}
 		case Lock:
+			if( state == Move ) {
+				anim.currentFrame = 0;
+				anim.speed = 0;
+			}
 		}
 		return state = s;
 	}
@@ -143,8 +151,9 @@ class Hero extends Entity {
 				die(x, y);
 
 
-			if( K.isPressed(K.SPACE) && !game.tf.visible ) {
+			if( K.isPressed(K.SPACE) && !game.tf.visible && lastTextEnd < haxe.Timer.stamp() - 0.5 ) {
 				var t = ["Nothing here..."];
+				var onEnd = null;
 				var tx = Std.int(x + dirX * 10);
 				var ty = Std.int(y + dirY * 10);
 
@@ -157,12 +166,72 @@ class Hero extends Entity {
 				if( tx > 200 && tx < 250 && ty > 270 )
 					t = ["A door.", "It's locked."];
 
+				if( tx > 400 && tx < 430 && ty < 40 )
+					t = ["The wall is badely damaged.", "I wish I could escape from here."];
+
+
+				if( tx > 440 && tx < 470 && ty < 45 ) {
+					if( !game.custom.fx.shader.inverse ) {
+						t = ["A light switch.", "I don't want to be in the dark..."];
+					} else {
+						state = Lock;
+						t = ["A light switch.", "That could be useful..."];
+						onEnd = function() {
+							game.event.wait(0.5, function() {
+								state = Move;
+								hxd.Res.click.play();
+								var t = 0.;
+								var delay = 0.05;
+								game.event.waitUntil(function(dt) {
+									t += dt / 60;
+									delay *= Math.pow(0.99, dt);
+									game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
+									if( t > 0.5 ) {
+										game.custom.fx.shader.inverse = false;
+										return true;
+									}
+									return false;
+								});
+							});
+						}
+					}
+				}
+
+				if( tx > 455 && ty > 280 ) {
+					if( game.custom.fx.shader.inverse )
+						t = ["A power socket.", "I shouldn't touch this..."];
+					else {
+						t = ["A power socket.", "What if..."];
+						state = Lock;
+						onEnd = function() {
+							var t = 0.;
+							var delay = 0.1;
+							hxd.Res.electric.play();
+							game.event.waitUntil(function(dt) {
+								t += dt / 60;
+								delay *= Math.pow(0.99, dt);
+								game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
+								if( t > 1 ) {
+									die(0,0);
+									game.custom.fx.shader.inverse = true;
+									return true;
+								}
+								return false;
+							});
+						};
+					}
+				}
+
 				#if debug
 				trace(tx, ty);
 				#end
 				function next() {
 					var t = t.shift();
-					if( t == null ) return;
+					if( t == null ) {
+						lastTextEnd = haxe.Timer.stamp();
+						if( onEnd != null ) onEnd();
+						return;
+					}
 					game.text(t, next);
 				}
 				next();
