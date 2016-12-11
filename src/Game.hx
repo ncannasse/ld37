@@ -96,7 +96,10 @@ class Game extends hxd.App {
 	public var seq : Int = 0;
 	public var step : Int;
 
+	var music : hxd.snd.Channel;
+
 	override function init() {
+
 		s2d.setFixedSize(512, 326);
 
 
@@ -114,6 +117,7 @@ class Game extends hxd.App {
 
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 		tf.y = 100;
+		tf.visible = false;
 		tf.filters = [new h2d.filter.Glow(DARK,0.8)];
 		tf.letterSpacing = 3;
 
@@ -121,10 +125,12 @@ class Game extends hxd.App {
 		s2d.renderer = c;
 
 		#if debug
-		seq = 2;
+		seq = 4;
+		startScenario();
+		#else
+		startScenario();
 		#end
 
-		startScenario();
 	}
 
 
@@ -177,6 +183,13 @@ class Game extends hxd.App {
 	}
 
 	function nextSeq() {
+
+		if( hero.state == Die )
+			return;
+
+		if( seq >= 0 && music == null )
+			music = hxd.Res.music.play(true);
+
 		switch( ++seq ) {
 		case 0:
 			hero.state = Lock;
@@ -190,15 +203,16 @@ class Game extends hxd.App {
 			nextScenario();
 		case 2:
 			text("Was I dreaming ?!?", function() {
-				text("This room.... was it mine?", function() {
-					text("And was it trying... to KILL ME?", function() {
+				text("This room.... what am I doing here?", function() {
+					text("And is it trying... to KILL ME?", function() {
 						nextSeq();
 					});
 				});
 			});
 		case 3:
-			var txt = "And was it trying... to KILL ME?";
+			var txt = "And is it trying... to KILL ME?";
 			//tf.text = txt;
+			var all = [];
 			for( i in 0...txt.length ) {
 				var c = txt.charCodeAt(i);
 				var t = tf.font.getChar(c);
@@ -207,20 +221,36 @@ class Game extends hxd.App {
 					tt.dx = -(tt.width >> 1);
 					tt.dy = -(tt.height >> 1);
 					var c = new Shuriken(tt);
+					all.push(c);
 					c.anim.filters = tf.filters;
 					c.x = tf.calcTextWidth(txt.substr(0,i)) + tf.x + (tt.width>>1) + t.t.dx;
 					c.y = tf.y + (tt.height >> 1) + t.t.dy;
 					event.wait(0.5 + Math.random() * 0.3 + i * 0.05, function() {
+						shake();
 						c.rotSpeed = 1e-9;
 						if( haxe.Timer.stamp() - hxd.Res.shuriken.lastPlay > 0.05 ) hxd.Res.shuriken.play();
 					});
 				}
 			}
+			event.waitUntil(function(dt) {
+				for( a in all )
+					if( a.anim.parent == null )
+						all.remove(a);
+				if( all.length == 0 ) {
+					event.wait(2, nextSeq);
+					return true;
+				}
+				return false;
+			});
+		case 4:
+			text("I must find an answer!", function() {
+			});
 		}
 	}
 
-	function text( str, onEnd : Void -> Void ) {
+	public function text( str, onEnd : Void -> Void ) {
 		tf.text = str;
+		tf.visible = true;
 		tf.x = Std.int((s2d.width - tf.textWidth) * 0.5);
 		tf.text = "";
 		var t = 0.;
@@ -245,6 +275,7 @@ class Game extends hxd.App {
 			}
 			if( done ) {
 				tf.text = "";
+				tf.visible = false;
 				onEnd();
 				return true;
 			}
@@ -260,7 +291,7 @@ class Game extends hxd.App {
 
 		switch( ++step ) {
 		case 0, 5, 6:
-			hxd.Res.tonals.play();
+
 			var t = step < 5 ? 2 : 0.01;
 			event.wait(t, function() {
 
@@ -288,13 +319,14 @@ class Game extends hxd.App {
 		case 2:
 
 			showPics( 4 + Std.random(3), false );
-			event.wait(5, nextScenario);
+			event.wait(5.5, nextScenario);
 
 		case 3:
 
-			hxd.Res.cygal.play();
+			shake(0.1, 3);
 
 			event.wait(0.1, function() {
+				hxd.Res.wall.play();
 				var dx = 0.;
 				var k = 0;
 				var room = hxd.Res.room.getPixels().sub(0, 0, 250, collide.height);
@@ -307,7 +339,7 @@ class Game extends hxd.App {
 							door.y--;
 						if( k > 150 ) {
 							k = -1;
-							nextScenario();
+							event.wait(1, nextScenario);
 							break;
 						}
 						dx--;
@@ -325,6 +357,8 @@ class Game extends hxd.App {
 
 			var speed = 0.03;
 			var done = false;
+			var chan = hxd.Res.rotate.play();
+			shake(0.2, 7.5);
 
 			event.waitUntil(function(dt) {
 
@@ -341,9 +375,13 @@ class Game extends hxd.App {
 				var dy = (p.y - s2d.height * 0.5);
 
 				// centrifuge
-				if( hero.state == Die )
+				if( hero.state == Die ) {
+					if( chan != null ) {
+						chan.fadeTo(0);
+						chan = null;
+					}
 					speed *= 0.95;
-				else {
+				} else {
 					p.x += dx * 0.01 * dt;
 					p.y += dy * 0.01 * dt;
 
@@ -362,6 +400,19 @@ class Game extends hxd.App {
 		}
 	}
 
+	function shake(v = 1., time = 0.3) {
+		var baseY = -s2d.height >> 1;
+		event.waitUntil(function(dt) {
+			time -= dt / 60;
+			if( time < 0 ) {
+				root.y = baseY;
+				return true;
+			}
+			root.y = baseY + Math.round( hxd.Math.srand() * v * 10 * time );
+			return false;
+		});
+	}
+
 	function showPics( mid : Int, auto : Bool ) {
 		var all = [];
 		for( x in 0...Std.int(s2d.width / 16) ) {
@@ -369,7 +420,10 @@ class Game extends hxd.App {
 			for( y in 0...Std.int(s2d.height/16) ) {
 				if( !hasCollide(x * 16 + 4, y * 16 + 4) && !hasCollide(x * 16 + 12, y* 16 + 12) ) {
 					var p = new Pic(x * 16 + 8, y * 16 + 8);
-					event.wait( 2 - Math.abs(x - mid) * 0.1, p.hit);
+					event.wait( 2 - Math.abs(x - mid) * 0.1, function() {
+						p.hit();
+						shake();
+					});
 					all.push(p);
 				}
 			}

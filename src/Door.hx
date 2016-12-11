@@ -7,10 +7,11 @@ class Door extends Entity {
 
 	public function new() {
 		super();
-		play([h2d.Tile.fromColor(0)]);
+		play([h2d.Tile.fromColor(0,0.)]);
 
 		//	bg
-		var bg = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, 96, 31), anim);
+		var bg = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, 92, 31), anim);
+		bg.x = 4;
 
 		ldoor = new h2d.Bitmap(game.tiles.sub(96, 96, 33, 32), anim);
 		ldoor.x = 16;
@@ -20,6 +21,8 @@ class Door extends Entity {
 
 		// fg
 		new h2d.Bitmap(game.tiles.sub(0, 96, 96, 32), anim);
+
+
 
 	}
 

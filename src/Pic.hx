@@ -27,7 +27,7 @@ class Pic extends Entity {
 
 	public function hit() {
 		anim.speed = 20;
-		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
+		if( hxd.Res.pic.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
 	}
 
 	public function hide(onEnd) {
@@ -35,7 +35,7 @@ class Pic extends Entity {
 		var a = ANIM.copy();
 		a.reverse();
 		play(a, null, onEnd);
-		if( hxd.Res.click.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
+		if( hxd.Res.pic.lastPlay < haxe.Timer.stamp() - 0.05 ) hxd.Res.pic.play();
 	}
 
 }

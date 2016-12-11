@@ -23,6 +23,9 @@ class Hero extends Entity {
 		deadStand : Anim,
 	};
 
+	var dirX = 0;
+	var dirY = 0;
+
 	public function new() {
 		super();
 		var sleep = game.tiles.sub(0, 32, 32 * 3, 32).split();
@@ -94,13 +97,13 @@ class Hero extends Entity {
 
 		case Move:
 			var dx = 0, dy = 0;
-			if( K.isDown(K.LEFT) )
+			if( K.isDown(K.LEFT) || K.isDown("Q".code) || K.isDown("A".code) )
 				dx--;
-			if( K.isDown(K.RIGHT) )
+			if( K.isDown(K.RIGHT) || K.isDown("D".code) )
 				dx++;
-			if( K.isDown(K.UP) )
+			if( K.isDown(K.UP) || K.isDown("Z".code) || K.isDown("W".code) )
 				dy--;
-			if( K.isDown(K.DOWN) )
+			if( K.isDown(K.DOWN) || K.isDown("S".code) )
 				dy++;
 
 			if( dx != 0 ) {
@@ -111,6 +114,11 @@ class Hero extends Entity {
 
 			if( dx == 0 && dy == 0 )
 				anim.currentFrame = 0.4;
+			else {
+				dirX = dx;
+				dirY = dy;
+			}
+
 
 			var cs = Math.cos(anim.rotation);
 			var ss = Math.sin(anim.rotation);
@@ -118,7 +126,7 @@ class Hero extends Entity {
 			var mx = dx * cs - dy * ss;
 			var my = dx * ss + dy * cs;
 
-			var ms = dt * 1.5;
+			var ms = dt * 1.5 / (dx == 0 && dy == 0 ? 1 : Math.sqrt(dx * dx + dy * dy));
 			mx *= ms;
 			my *= ms;
 
@@ -133,6 +141,33 @@ class Hero extends Entity {
 			}
 			if( game.hasCollide(x, y) || K.isPressed(K.ESCAPE) )
 				die(x, y);
+
+
+			if( K.isPressed(K.SPACE) && !game.tf.visible ) {
+				var t = ["Nothing here..."];
+				var tx = Std.int(x + dirX * 10);
+				var ty = Std.int(y + dirY * 10);
+
+				if( tx > 254 && tx < 300 && ty < 40 )
+					t = ["A painting.", "I'm feeling... observed."];
+
+				if( tx > 345 && tx < 395 && ty < 70 )
+					t = ["A bed.", "My bed?"];
+
+				if( tx > 200 && tx < 250 && ty > 270 )
+					t = ["A door.", "It's locked."];
+
+				#if debug
+				trace(tx, ty);
+				#end
+				function next() {
+					var t = t.shift();
+					if( t == null ) return;
+					game.text(t, next);
+				}
+				next();
+			}
+
 		case Lock:
 		case Die:
 			if( K.isPressed(K.SPACE) || K.isPressed(K.ESCAPE) ) {
