@@ -109,6 +109,9 @@ class Game extends hxd.App {
 	public var computer : Computer;
 	public var play : ComputerPlay;
 
+	public var hasComputer : Bool;
+	public var hasUnlock : Bool;
+
 	var music : hxd.snd.Channel;
 
 	override function init() {
@@ -144,13 +147,17 @@ class Game extends hxd.App {
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 		tf.y = 100;
 		tf.visible = false;
-		tf.filters = [new h2d.filter.Glow(DARK,0.7)];
+		tf.filters = [new h2d.filter.Glow(DARK,0.8)];
 		tf.letterSpacing = 3;
 
 		custom = new CustomRenderer(s2d);
 		s2d.renderer = custom;
 
+		#if debug
+		start();
+		#else
 		title();
+		#end
 	}
 
 	function title() {
@@ -274,10 +281,12 @@ class Game extends hxd.App {
 
 	function start() {
 		#if debug
-		seq = 2;
+		seq = 4;
 		startScenario();
-		//new ComputerPlay();
-		//hero.state = Lock;
+		new ComputerPlay();
+		hero.y -= 30;
+		hero.x -= 5;
+		hero.state = Lock;
 		#else
 		startScenario();
 		#end
@@ -330,7 +339,11 @@ class Game extends hxd.App {
 		new Eye(497, 85);
 		new Eye(497, 91);
 
-		computer = null;
+
+		if( hasComputer )
+			computer = new Computer();
+		else
+			computer = null;
 
 		if( step > 0 || seq > 1 ) {
 			hero.state = Move;
@@ -402,6 +415,13 @@ class Game extends hxd.App {
 			});
 		case 4:
 			if( tf.visible ) return;
+
+			if( hasUnlock ) {
+				text("Let's ESCAPE!", function() {});
+				computer = new Computer();
+				return;
+			}
+
 			text( custom.fx.shader.inverse ? "Why is it dark?" : "I must find an answer!", function() {
 			});
 		}
@@ -524,49 +544,58 @@ class Game extends hxd.App {
 
 		case 4:
 
-			var speed = 0.03;
-			var done = false;
-			var chan = hxd.Res.rotate.play();
-			shake(0.2, 7.5, function() return speed / 0.03);
-
-			event.waitUntil(function(dt) {
-
-
-				var p = root.localToGlobal(new h2d.col.Point(hero.x, hero.y));
-				rotate.rotation += speed * dt;
-				if( rotate.rotation > Math.PI * 4 ) {
-					rotate.rotation = Math.PI * 4;
-					nextScenario();
-					done = true;
-				}
-
-				var dx = (p.x - s2d.width * 0.5);
-				var dy = (p.y - s2d.height * 0.5);
-
-				// centrifuge
-				if( hero.state == Die ) {
-					if( chan != null ) {
-						chan.fadeTo(0);
-						chan = null;
-					}
-					speed *= 0.95;
-				} else {
-					p.x += dx * 0.005 * dt;
-					p.y += dy * 0.005 * dt;
-
-					p = root.globalToLocal(p);
-					hero.x = p.x;
-					hero.y = p.y;
-				}
-
-				return done;
-			});
+			rotateRoom(nextScenario);
 
 		case 7:
 
 			event.wait(3, nextSeq);
 
 		}
+	}
+
+	public function rotateRoom(onEnd, way = 1) {
+		var speed = 0.03;
+
+		if( way < 0 )
+			speed *= 0.4;
+
+		var done = false;
+		var chan = hxd.Res.rotate.play();
+		shake(0.2, 7.5, function() return speed / 0.03);
+
+		event.waitUntil(function(dt) {
+
+
+			var p = root.localToGlobal(new h2d.col.Point(hero.x, hero.y));
+			rotate.rotation += speed * dt * way;
+			if( Math.abs(rotate.rotation) > Math.PI * 4 ) {
+				rotate.rotation = Math.PI * 4;
+				onEnd();
+				done = true;
+			}
+
+			var dx = (p.x - s2d.width * 0.5);
+			var dy = (p.y - s2d.height * 0.5);
+
+			// centrifuge
+			if( hero.state == Die ) {
+				if( chan != null ) {
+					chan.fadeTo(0);
+					chan = null;
+				}
+				speed *= 0.95;
+			} else {
+				p.x += dx * 0.005 * dt;
+				p.y += dy * 0.005 * dt;
+
+				p = root.globalToLocal(p);
+				hero.x = p.x;
+				hero.y = p.y;
+			}
+
+			return done;
+		});
+
 	}
 
 	function shake(v = 1., time = 0.3, ?dynSpeed : Void -> Float) {

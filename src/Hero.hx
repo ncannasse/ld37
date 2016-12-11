@@ -173,8 +173,10 @@ class Hero extends Entity {
 					t = ["The wall is badely damaged.", "I wish I could escape from here."];
 
 
-				if( tx > 200 && tx < 230 && ty < 70 && (game.door == null || !game.door.open) ) {
-					if( game.computer == null )
+				if( tx > 200 && tx < 230 && ty < 70 ) {
+					if( game.door != null && game.door.open )
+						t = ["I should leave NOW!"];
+					else if( game.computer == null )
 						t = ["A computer.", "It's not working."];
 					else {
 						t = ["The computer is working.", "Let's see..."];
@@ -192,7 +194,18 @@ class Hero extends Entity {
 
 				if( tx > 440 && tx < 470 && ty < 45 ) {
 					if( !game.custom.fx.shader.inverse ) {
-						t = ["A power switch.", "I don't want to be in the dark..."];
+						if( game.hasComputer ) {
+							t = ["A power switch.", "I should use this computer..."];
+							onEnd = function() {
+								game.event.wait(0.5, function() {
+									state = Move;
+									hxd.Res.click.play();
+									if( game.computer == null )
+										game.computer = new Computer();
+								});
+							};
+						} else
+							t = ["A power switch.", "I don't want to be in the dark..."];
 					} else {
 						t = ["A power switch.", "That could be useful..."];
 						onEnd = function() {
@@ -207,8 +220,10 @@ class Hero extends Entity {
 									game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
 									if( t > 0.5 ) {
 
-										if( game.computer == null )
+										if( game.computer == null ) {
+											game.hasComputer = true;
 											game.computer = new Computer();
+										}
 
 										game.custom.fx.shader.inverse = false;
 										return true;
@@ -265,11 +280,20 @@ class Hero extends Entity {
 				next();
 			}
 
-			if( y > 325 && game.door != null && game.door.open ) {
+			if( y > 300 && game.door != null && game.door.open ) {
 				state = Lock;
+
+				game.event.waitUntil(function(dt) {
+					y += dt;
+					anim.alpha -= 0.02 * dt;
+					return false;
+				});
+
 				game.event.wait(2, function() {
 
-					var t = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, game.s2d.width, game.s2d.height));
+					var t = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, game.s2d.width*3, game.s2d.height*3));
+					t.x = -game.s2d.width;
+					t.y = -game.s2d.height;
 					game.root.add(t, 4);
 
 					t.alpha = 0;
@@ -279,11 +303,12 @@ class Hero extends Entity {
 						if( t.alpha > 1.1 ) {
 							game.play.remove();
 
+							game.rotate.rotation = -Math.PI * 4;
 							var tf = new h2d.Text(hxd.res.DefaultFont.get(), t);
 							tf.alpha = 0.5;
 							tf.text = "Made in 48h for LD#37 by @ncannasse";
-							tf.x = game.s2d.width - tf.textWidth * tf.scaleX - 5;
-							tf.y = game.s2d.height - tf.textHeight * tf.scaleY - 5;
+							tf.x = game.s2d.width * 2 - tf.textWidth * tf.scaleX - 5;
+							tf.y = game.s2d.height * 2 - tf.textHeight * tf.scaleY - 5;
 
 							game.event.wait(1.5, function() {
 								game.text("Wait...", function() {

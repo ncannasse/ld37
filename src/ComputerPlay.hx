@@ -85,11 +85,20 @@ class ComputerPlay extends Entity {
 	public var volume = 1.;
 
 	function runCommand(cmd:String) {
+
+		cmd = StringTools.trim(cmd);
+
 		var args = ~/ +/g.split(cmd);
 		switch( args.shift() ) {
 		case "help":
-			pr("Use [exit] [ls] [rm]", function() pr("Nobody will help you.", wait));
+			pr("Use [exit] [ls] [rm]", function() pr("[nobody] will help you.", wait));
 		case "exit":
+
+			if( args.length > 0 ) {
+				pr("Use without parameter", wait);
+				return;
+			}
+
 			function goodNight() {
 				pr("Good night.", goodNight);
 			}
@@ -155,6 +164,8 @@ class ComputerPlay extends Entity {
 								for( y in 0...80 )
 									game.collide.setPixel(x + 210, y + 260, 0);
 
+							game.hasUnlock = true;
+
 							pr("Door opened", function() {
 								game.hero.state = Move; // unlock
 								@:privateAccess game.hero.anim.frames = game.hero.anims.walkDown;
@@ -165,6 +176,19 @@ class ComputerPlay extends Entity {
 								}
 								loop();
 
+								game.event.wait(1, function() {
+									game.event.waitUntil(function(dt) {
+										anim.alpha -= 0.01 * dt;
+										if( anim.alpha < 0 ) return true;
+										return false;
+									});
+									function loop2() {
+										if( game.hero.state != Move ) return;
+										game.rotateRoom(loop2,-1);
+									}
+									loop2();
+								});
+
 							});
 						}
 					});
@@ -174,7 +198,7 @@ class ComputerPlay extends Entity {
 				pr("File not found", wait);
 			}
 		case "nobody":
-			pr("Follow virus", wait);
+			pr("Virus will help", wait);
 		default:
 			hxd.Res.error.play();
 			pr("Unknown command", function() pr("Use [help]", wait));

@@ -9,7 +9,7 @@ class Eye extends Entity {
 		super();
 		this.x = this.baseX = x;
 		this.y = this.baseY = y;
-		play([h2d.Tile.fromColor(0xAD9393)]);
+		play([h2d.Tile.fromColor(Game.DARK)]);
 	}
 
 	override public function update(dt:Float) {
