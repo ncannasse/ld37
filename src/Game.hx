@@ -680,13 +680,11 @@ class Game extends hxd.App {
 	public static var inst : Game;
 
 	static function main() {
-		#if debug
+		hxd.Res.initEmbed({compressSounds:true});
+		/*
 		hxd.Res.initLocal();
 		Std.instance(hxd.Res.loader.fs, hxd.fs.LocalFileSystem).createMP3 = true;
-		hxd.res.Resource.LIVE_UPDATE = true;
-		#else
-		hxd.Res.initEmbed({compressSounds:true});
-		#end
+		hxd.res.Resource.LIVE_UPDATE = true;*/
 		inst = new Game();
 	}
 
