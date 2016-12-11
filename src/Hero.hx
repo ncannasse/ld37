@@ -82,7 +82,9 @@ class Hero extends Entity {
 		return state = s;
 	}
 
-	public function die(x, y, dx = 0., dy = -1.) {
+	public function die(?x, ?y, dx = 0., dy = -1.) {
+		if( x == null ) x = this.x;
+		if( y == null ) y = this.y;
 		if( state == Die ) return;
 		hxd.Res.die.play();
 		new Blood(x,y, dx, dy);
@@ -100,7 +102,7 @@ class Hero extends Entity {
 
 			if( K.isPressed(K.DOWN) ) {
 				state = Lock;
-				play(anims.wake, 20,function() { y += 12; state = Move; });
+				play(anims.wake, 20, function() { y += 12; state = Move; play(anims.walkDown, 20); });
 			}
 
 		case Move:
@@ -134,9 +136,11 @@ class Hero extends Entity {
 			var mx = dx * cs - dy * ss;
 			var my = dx * ss + dy * cs;
 
-			var ms = dt * 1.5 / (dx == 0 && dy == 0 ? 1 : Math.sqrt(dx * dx + dy * dy));
-			mx *= ms;
-			my *= ms;
+			if( dx != 0 || dy != 0 ) {
+				var ms = dt * 1.5 / Math.sqrt(dx * dx + dy * dy);
+				mx *= ms;
+				my *= ms;
+			}
 
 
 			for( i in 0...4 ) {
@@ -150,8 +154,7 @@ class Hero extends Entity {
 			if( game.hasCollide(x, y) || K.isPressed(K.ESCAPE) )
 				die(x, y);
 
-
-			if( K.isPressed(K.SPACE) && !game.tf.visible && lastTextEnd < haxe.Timer.stamp() - 0.5 ) {
+			if( K.isPressed(K.SPACE) && !game.tf.visible && lastTextEnd < haxe.Timer.stamp() - 0.5 && game.seq >= 4 ) {
 				var t = ["Nothing here..."];
 				var onEnd = null;
 				var tx = Std.int(x + dirX * 10);
@@ -170,12 +173,28 @@ class Hero extends Entity {
 					t = ["The wall is badely damaged.", "I wish I could escape from here."];
 
 
+				if( tx > 200 && tx < 230 && ty < 70 && (game.door == null || !game.door.open) ) {
+					if( game.computer == null )
+						t = ["A computer.", "It's not working."];
+					else {
+						t = ["The computer is working.", "Let's see..."];
+						onEnd = function() {
+
+							new ComputerPlay();
+
+						};
+					}
+				}
+
+				if( tx > 470 && ty > 65 && ty < 115 )
+					t = ["A dirty glass.", "I can't see behind.", "But I can hear voices.", "IS SOMEBODY HERE?!?"];
+
+
 				if( tx > 440 && tx < 470 && ty < 45 ) {
 					if( !game.custom.fx.shader.inverse ) {
-						t = ["A light switch.", "I don't want to be in the dark..."];
+						t = ["A power switch.", "I don't want to be in the dark..."];
 					} else {
-						state = Lock;
-						t = ["A light switch.", "That could be useful..."];
+						t = ["A power switch.", "That could be useful..."];
 						onEnd = function() {
 							game.event.wait(0.5, function() {
 								state = Move;
@@ -187,6 +206,10 @@ class Hero extends Entity {
 									delay *= Math.pow(0.99, dt);
 									game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
 									if( t > 0.5 ) {
+
+										if( game.computer == null )
+											game.computer = new Computer();
+
 										game.custom.fx.shader.inverse = false;
 										return true;
 									}
@@ -202,17 +225,20 @@ class Hero extends Entity {
 						t = ["A power socket.", "I shouldn't touch this..."];
 					else {
 						t = ["A power socket.", "What if..."];
-						state = Lock;
 						onEnd = function() {
 							var t = 0.;
 							var delay = 0.1;
+							if( game.computer != null ) {
+								game.computer.remove();
+								game.computer = null;
+							}
 							hxd.Res.electric.play();
 							game.event.waitUntil(function(dt) {
 								t += dt / 60;
 								delay *= Math.pow(0.99, dt);
 								game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
 								if( t > 1 ) {
-									die(0,0);
+									die();
 									game.custom.fx.shader.inverse = true;
 									return true;
 								}
@@ -228,23 +254,64 @@ class Hero extends Entity {
 				function next() {
 					var t = t.shift();
 					if( t == null ) {
+						if( state == Lock && onEnd == null ) state = Move;
 						lastTextEnd = haxe.Timer.stamp();
 						if( onEnd != null ) onEnd();
 						return;
 					}
 					game.text(t, next);
 				}
+				state = Lock;
 				next();
 			}
 
+			if( y > 325 && game.door != null && game.door.open ) {
+				state = Lock;
+				game.event.wait(2, function() {
+
+					var t = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, game.s2d.width, game.s2d.height));
+					game.root.add(t, 4);
+
+					t.alpha = 0;
+					game.event.waitUntil(function(dt) {
+						t.alpha += dt * 0.002;
+						game.play.volume -= dt * 0.004;
+						if( t.alpha > 1.1 ) {
+							game.play.remove();
+
+							var tf = new h2d.Text(hxd.res.DefaultFont.get(), t);
+							tf.alpha = 0.5;
+							tf.text = "Made in 48h for LD#37 by @ncannasse";
+							tf.x = game.s2d.width - tf.textWidth * tf.scaleX - 5;
+							tf.y = game.s2d.height - tf.textHeight * tf.scaleY - 5;
+
+							game.event.wait(1.5, function() {
+								game.text("Wait...", function() {
+									game.text("Oh sh*t...", function() {
+										game.event.wait(0.5, function() {
+											game.tf.text = "The EOF";
+											game.tf.visible = true;
+										});
+									},2);
+								},1);
+							});
+							return true;
+						}
+						return false;
+					});
+				});
+			}
+
+
 		case Lock:
 		case Die:
-			if( K.isPressed(K.SPACE) || K.isPressed(K.ESCAPE) ) {
+			if( K.isPressed(K.SPACE) || K.isPressed(K.ESCAPE) || K.isPressed(K.ENTER) ) {
 				state = Lock;
 				game.dieCount++;
 				haxe.Timer.delay(function() game.startScenario(), 0);
 			}
 		}
+
 
 	}
 

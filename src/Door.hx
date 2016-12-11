@@ -3,11 +3,13 @@ class Door extends Entity {
 	var ldoor : h2d.Sprite;
 	var rdoor : h2d.Sprite;
 	var opening : Float = 0.;
+	var fg : h2d.Bitmap;
 	public var open(default,set) : Bool = false;
 
 	public function new() {
 		super();
-		play([h2d.Tile.fromColor(0,0.)]);
+		play([h2d.Tile.fromColor(0, 0.)]);
+		game.root.add(anim, 1);
 
 		//	bg
 		var bg = new h2d.Bitmap(h2d.Tile.fromColor(Game.DARK, 92, 31), anim);
@@ -20,9 +22,8 @@ class Door extends Entity {
 		rdoor.x = 48;
 
 		// fg
-		new h2d.Bitmap(game.tiles.sub(0, 96, 96, 32), anim);
-
-
+		fg = new h2d.Bitmap(game.tiles.sub(160, 96, 96, 64));
+		game.root.add(fg, 3);
 
 	}
 
@@ -36,6 +37,11 @@ class Door extends Entity {
 	}
 
 	public dynamic function onChange() {
+	}
+
+	override public function remove() {
+		super.remove();
+		fg.remove();
 	}
 
 	override function update(dt:Float) {
@@ -71,6 +77,8 @@ class Door extends Entity {
 		ldoor.x = Std.int(16 - opening * 24);
 		rdoor.x = Std.int(48 + opening * 24);
 
+		fg.x = anim.x;
+		fg.y = anim.y;
 	}
 
 }

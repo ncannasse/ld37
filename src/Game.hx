@@ -28,7 +28,7 @@ class Composite extends h3d.shader.ScreenShader {
 		function fragment() {
 			var uv = input.uv;
 			var c = mix( bg.get(uv) , persist.get(uv), 0.2 );
-			output.color = inverse ? 1 - c : c;
+			output.color = inverse ? mix(1 - c, c, float(c.r * (1 - c.g) * (1 - c.b) > 0.5)) : c;
 		}
 
 	}
@@ -41,6 +41,8 @@ class CustomRenderer extends h2d.RenderContext {
 	public var fx : h3d.pass.ScreenFx<Composite>;
 	var merge : h3d.pass.ScreenFx<Merge>;
 	var blur : h3d.pass.Blur;
+
+	var persist : h3d.mat.Texture;
 
 	public function new(s2d) {
 		super(s2d);
@@ -57,7 +59,11 @@ class CustomRenderer extends h2d.RenderContext {
 		super.drawScene();
 		popTarget();
 
-		var persist = allocTarget("persist");
+		if( persist == null || persist.isDisposed() ) {
+			persist = new h3d.mat.Texture(scene.width, scene.height, [Target]);
+			persist.filter = Nearest;
+		}
+
 		var blurred = allocTarget("blur");
 		blur.apply(persist, allocTarget("blurTmp"), blurred);
 
@@ -100,6 +106,9 @@ class Game extends hxd.App {
 
 	public var custom : CustomRenderer;
 
+	public var computer : Computer;
+	public var play : ComputerPlay;
+
 	var music : hxd.snd.Channel;
 
 	override function init() {
@@ -124,6 +133,10 @@ class Game extends hxd.App {
 		carpet2.x = 330;
 		carpet2.y = 40;
 
+		var carpet3 = new h2d.Bitmap(hxd.Res.carpet2.toTile(), root);
+		carpet3.x = 350;
+		carpet3.y = 160;
+
 		var room = new h2d.Bitmap(h2d.Tile.fromTexture(roomTex), root);
 		tiles = hxd.Res.anims.toTile();
 		bitmap = hxd.Res.anims.getPixels();
@@ -131,16 +144,140 @@ class Game extends hxd.App {
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 		tf.y = 100;
 		tf.visible = false;
-		tf.filters = [new h2d.filter.Glow(DARK,0.8)];
+		tf.filters = [new h2d.filter.Glow(DARK,0.7)];
 		tf.letterSpacing = 3;
 
 		custom = new CustomRenderer(s2d);
 		s2d.renderer = custom;
 
+		title();
+	}
+
+	function title() {
+
+		event = new hxd.WaitEvent();
+
+		var t = hxd.Res.room2P.toTile();
+		var K = 128;
+		t = t.sub(0, 0, t.width * (K + 1), t.height * (K + 1));
+		t.dx = -(t.width) >> 1;
+		t.dy = -(t.height) >> 1;
+
+		var title = new h2d.Sprite(s2d);
+
+		var tx : h2d.Bitmap = null;
+
+		var cont = new h2d.Sprite(title);
+
+		var b = new h2d.Bitmap(t, cont);
+		b.tileWrap = true;
+		b.x = s2d.width >> 1;
+		b.y = s2d.height >> 1;
+		b.filter = true;
+		b.scale(1 / K);
+		b.scaleY *= 326 / 512;
+
+		var blur = new h2d.filter.Blur(2, 2, 1);
+		blur.filter = false;
+		cont.filters = [blur];
+
+
+		function zoom() {
+
+		var K = K * 1.0;
+
+		event.wait(1, function() {
+
+			event.waitUntil(function(dt) {
+
+				K *= Math.pow(0.99, dt);
+
+				if( K < 0.953 ) {
+					K = 0.953;
+
+					tx.alpha -= 0.02 * dt;
+					if( tx.colorAdd == null )
+						tx.colorAdd = new h3d.Vector();
+					tx.colorAdd.set(1 - tx.alpha, 1 - tx.alpha, 1 - tx.alpha, 0);
+
+					blur.sigma *= Math.pow(0.95, dt);
+					if( blur.sigma < 0.1 ) {
+
+						start();
+
+						event.waitUntil(function(dt) {
+							b.alpha -= 0.1 * dt;
+							if( b.alpha < 0 ) {
+								title.remove();
+								return true;
+							}
+							return false;
+						});
+
+					}
+				}
+
+
+				b.setScale(1 / K);
+				b.scaleY *= 326 / 512;
+				return false;
+
+			});
+
+		});
+
+		}
+
+
+		tx = new h2d.Bitmap(hxd.Res.title.toTile(), title);
+
+		tx.x = (s2d.width - tx.tile.width) >> 1;
+		tx.y = 100;
+		tx.blendMode = Multiply;
+
+		var start = new h2d.Text(hxd.res.DefaultFont.get(), title);
+		start.text = "Click to start";
+		start.x = (s2d.width - start.textWidth) >> 1;
+		start.y = 250;
+		start.alpha = 0.5;
+		start.textColor = DARK;
+
+		var i = new h2d.Interactive(s2d.width, s2d.height, s2d);
+		i.onClick = function(_) {
+			hxd.Res.error.play();
+			haxe.Timer.delay(hxd.System.setCursor.bind(Hide), 0);
+			start.remove();
+			i.remove();
+			zoom();
+		};
+
+		var t = 0.;
+		event.waitUntil(function(dt) {
+
+			t += dt / 60;
+			start.visible = Std.int(t / 0.2) % 2 == 0;
+
+
+			if( b.alpha < 1 ) {
+				b.y = (s2d.height >> 1);
+				return true;
+			}
+			b.y = hxd.Math.random() + (s2d.height >> 1);
+			return false;
+		});
+
+
+
+		music = hxd.Res.music.play(true);
+
+	}
+
+	function start() {
 		#if debug
-		seq = 4;
-		custom.fx.shader.inverse = true;
+		seq = 2;
 		startScenario();
+		//new ComputerPlay();
+		//hero.state = Lock;
 		#else
 		startScenario();
 		#end
@@ -185,7 +322,15 @@ class Game extends hxd.App {
 
 		door = new Door();
 		door.x = 175;
-		door.y = 276;
+		door.y = 277;
+
+		new Eye(496, 64);
+		new Eye(496, 70);
+
+		new Eye(497, 85);
+		new Eye(497, 91);
+
+		computer = null;
 
 		if( step > 0 || seq > 1 ) {
 			hero.state = Move;
@@ -201,15 +346,14 @@ class Game extends hxd.App {
 		if( hero.state == Die )
 			return;
 
-		if( seq >= 0 && music == null )
-			music = hxd.Res.music.play(true);
-
 		switch( ++seq ) {
 		case 0:
 			hero.state = Lock;
-			text("That day, I was sleeping...", function() {
-				text("When suddendly...", function() {
-					nextSeq();
+			event.wait(1, function() {
+				text("That day, I was sleeping...", function() {
+					text("When suddendly...", function() {
+						nextSeq();
+					});
 				});
 			});
 		case 1:
@@ -257,12 +401,13 @@ class Game extends hxd.App {
 				return false;
 			});
 		case 4:
-			text("I must find an answer!", function() {
+			if( tf.visible ) return;
+			text( custom.fx.shader.inverse ? "Why is it dark?" : "I must find an answer!", function() {
 			});
 		}
 	}
 
-	public function text( str, onEnd : Void -> Void ) {
+	public function text( str, onEnd : Void -> Void, ?delay ) {
 		tf.text = str;
 		tf.visible = true;
 		tf.x = Std.int((s2d.width - tf.textWidth) * 0.5);
@@ -272,6 +417,12 @@ class Game extends hxd.App {
 		var prev = 0;
 		var talk = [hxd.Res.talk4];
 		event.waitUntil(function(dt) {
+
+			if( hero.state == Die ) {
+				tf.visible = false;
+				return true;
+			}
+
 			t += dt * speed;
 			var k = Std.int(t);
 			if( k != prev && prev < str.length ) {
@@ -288,9 +439,15 @@ class Game extends hxd.App {
 					done = true;
 			}
 			if( done ) {
-				tf.text = "";
-				tf.visible = false;
-				onEnd();
+				function end() {
+					tf.text = "";
+					tf.visible = false;
+					onEnd();
+				}
+				if( delay == null )
+					end();
+				else
+					event.wait(delay, end);
 				return true;
 			}
 			return false;
@@ -349,8 +506,6 @@ class Game extends hxd.App {
 					var change = false;
 					while( dx > 1 ) {
 						k++;
-						if( k == 100 )
-							door.y--;
 						if( k > 150 ) {
 							k = -1;
 							event.wait(1, nextScenario);
@@ -372,7 +527,7 @@ class Game extends hxd.App {
 			var speed = 0.03;
 			var done = false;
 			var chan = hxd.Res.rotate.play();
-			shake(0.2, 7.5);
+			shake(0.2, 7.5, function() return speed / 0.03);
 
 			event.waitUntil(function(dt) {
 
@@ -396,8 +551,8 @@ class Game extends hxd.App {
 					}
 					speed *= 0.95;
 				} else {
-					p.x += dx * 0.01 * dt;
-					p.y += dy * 0.01 * dt;
+					p.x += dx * 0.005 * dt;
+					p.y += dy * 0.005 * dt;
 
 					p = root.globalToLocal(p);
 					hero.x = p.x;
@@ -414,7 +569,7 @@ class Game extends hxd.App {
 		}
 	}
 
-	function shake(v = 1., time = 0.3) {
+	function shake(v = 1., time = 0.3, ?dynSpeed : Void -> Float) {
 		var baseY = -s2d.height >> 1;
 		event.waitUntil(function(dt) {
 			time -= dt / 60;
@@ -422,7 +577,8 @@ class Game extends hxd.App {
 				root.y = baseY;
 				return true;
 			}
-			root.y = baseY + Math.round( hxd.Math.srand() * v * 10 * time );
+			var s = dynSpeed == null ? 1. : dynSpeed();
+			root.y = baseY + Math.round( hxd.Math.srand() * v * 10 * time * s );
 			return false;
 		});
 	}
@@ -458,7 +614,7 @@ class Game extends hxd.App {
 					}
 				}
 			if( hero.x < (xMin + 1) * 16 || hero.x > xMax * 16 ) {
-				hero.die(hero.x, hero.y);
+				hero.die();
 				return true;
 			}
 
