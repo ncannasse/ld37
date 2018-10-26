@@ -1,7 +1,7 @@
 class Door extends Entity {
 
-	var ldoor : h2d.Sprite;
-	var rdoor : h2d.Sprite;
+	var ldoor : h2d.Object;
+	var rdoor : h2d.Object;
 	var opening : Float = 0.;
 	var fg : h2d.Bitmap;
 	public var open(default,set) : Bool = false;

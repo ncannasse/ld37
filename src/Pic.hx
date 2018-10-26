@@ -1,7 +1,7 @@
 
 class Pic extends Entity {
 
-	static var ANIM;
+	static var ANIM = null;
 
 	public var active = true;
 
@@ -16,7 +16,7 @@ class Pic extends Entity {
 		anim.loop = false;
 		anim.alpha = 0;
 		game.event.waitUntil(function(dt) {
-			anim.alpha += ((x + 100) / 4000) * dt;
+			anim.alpha += ((x + 100) / 67) * dt;
 			if( anim.alpha > 1 ) {
 				anim.alpha = 1;
 				return true;

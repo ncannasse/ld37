@@ -1,6 +1,0 @@
--cp src
--cp lib
--js ld37.js
--main Game
--lib heaps
--dce full

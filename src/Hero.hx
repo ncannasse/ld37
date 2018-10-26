@@ -118,10 +118,12 @@ class Hero extends Entity {
 
 			if( dx != 0 ) {
 				anim.scaleX = dx * anim.scaleY;
-				anim.frames = anims.walk;
-			} else if( dy != 0 )
-				anim.frames = dy > 0 ? anims.walkDown : anims.walkUp;
-
+				anim.play(anims.walk, anim.currentFrame);
+				anim.loop = true;
+			} else if( dy != 0 ) {
+				anim.play(dy > 0 ? anims.walkDown : anims.walkUp, anim.currentFrame);
+				anim.loop = true;
+			}
 			if( dx == 0 && dy == 0 )
 				anim.currentFrame = 0.4;
 			else {
@@ -215,8 +217,8 @@ class Hero extends Entity {
 								var t = 0.;
 								var delay = 0.05;
 								game.event.waitUntil(function(dt) {
-									t += dt / 60;
-									delay *= Math.pow(0.99, dt);
+									t += dt;
+									delay *= Math.pow(0.99, dt*60);
 									game.custom.fx.shader.inverse = Std.int(t / delay) % 2 == 0;
 									if( t > 0.5 ) {
 
@@ -284,8 +286,8 @@ class Hero extends Entity {
 				state = Lock;
 
 				game.event.waitUntil(function(dt) {
-					y += dt;
-					anim.alpha -= 0.02 * dt;
+					y += dt*60;
+					anim.alpha -= 1.2 * dt;
 					return false;
 				});
 
@@ -298,8 +300,8 @@ class Hero extends Entity {
 
 					t.alpha = 0;
 					game.event.waitUntil(function(dt) {
-						t.alpha += dt * 0.002;
-						game.play.volume -= dt * 0.004;
+						t.alpha += dt * 0.12;
+						game.play.volume -= dt * 0.24;
 						if( t.alpha > 1.1 ) {
 							game.play.remove();
 

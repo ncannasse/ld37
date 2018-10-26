@@ -65,7 +65,7 @@ class CustomRenderer extends h2d.RenderContext {
 		}
 
 		var blurred = allocTarget("blur");
-		blur.apply(persist, allocTarget("blurTmp"), blurred);
+		blur.apply(this, persist, blurred);
 
 		pushTarget(persist);
 		merge.shader.tcur = blurred;
@@ -99,7 +99,7 @@ class Game extends hxd.App {
 
 	public var roomTex : h3d.mat.Texture;
 	public var root : h2d.Layers;
-	public var rotate : h2d.Sprite;
+	public var rotate : h2d.Object;
 
 	public var seq : Int = 0;
 	public var step : Int;
@@ -119,7 +119,7 @@ class Game extends hxd.App {
 		s2d.setFixedSize(512, 326);
 
 
-		rotate = new h2d.Sprite(s2d);
+		rotate = new h2d.Object(s2d);
 		root = new h2d.Layers(rotate);
 		root.x = -s2d.width >> 1;
 		root.y = -s2d.height >> 1;
@@ -147,7 +147,7 @@ class Game extends hxd.App {
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 		tf.y = 100;
 		tf.visible = false;
-		tf.filters = [new h2d.filter.Glow(DARK,0.8)];
+		tf.filter = new h2d.filter.Glow(DARK,0.8);
 		tf.letterSpacing = 3;
 
 		custom = new CustomRenderer(s2d);
@@ -170,23 +170,23 @@ class Game extends hxd.App {
 		t.dx = -(t.width) >> 1;
 		t.dy = -(t.height) >> 1;
 
-		var title = new h2d.Sprite(s2d);
+		var title = new h2d.Object(s2d);
 
 		var tx : h2d.Bitmap = null;
 
-		var cont = new h2d.Sprite(title);
+		var cont = new h2d.Object(title);
 
 		var b = new h2d.Bitmap(t, cont);
 		b.tileWrap = true;
 		b.x = s2d.width >> 1;
 		b.y = s2d.height >> 1;
-		b.filter = true;
+		b.smooth = true;
 		b.scale(1 / K);
 		b.scaleY *= 326 / 512;
 
-		var blur = new h2d.filter.Blur(2, 2, 1);
-		blur.filter = false;
-		cont.filters = [blur];
+		var blur = new h2d.filter.Blur(5);
+		blur.smooth = false;
+		cont.filter = blur;
 
 
 		function zoom() {
@@ -196,6 +196,7 @@ class Game extends hxd.App {
 		event.wait(1, function() {
 
 			event.waitUntil(function(dt) {
+				dt *= 60;
 
 				K *= Math.pow(0.99, dt);
 
@@ -207,13 +208,13 @@ class Game extends hxd.App {
 						tx.colorAdd = new h3d.Vector();
 					tx.colorAdd.set(1 - tx.alpha, 1 - tx.alpha, 1 - tx.alpha, 0);
 
-					blur.sigma *= Math.pow(0.95, dt);
-					if( blur.sigma < 0.1 ) {
+					blur.radius *= Math.pow(0.95, dt);
+					if( blur.radius < 0.1 ) {
 
 						start();
 
 						event.waitUntil(function(dt) {
-							b.alpha -= 0.1 * dt;
+							b.alpha -= 6 * dt;
 							if( b.alpha < 0 ) {
 								title.remove();
 								return true;
@@ -261,7 +262,7 @@ class Game extends hxd.App {
 		var t = 0.;
 		event.waitUntil(function(dt) {
 
-			t += dt / 60;
+			t += dt;
 			start.visible = Std.int(t / 0.2) % 2 == 0;
 
 
@@ -321,7 +322,7 @@ class Game extends hxd.App {
 		event = new hxd.WaitEvent();
 
 		event.waitUntil(function(dt) {
-			rotate.rotation = hxd.Math.angleMove(rotate.rotation, 0, 0.03 * dt);
+			rotate.rotation = hxd.Math.angleMove(rotate.rotation, 0, 1.8 * dt);
 			return rotate.rotation == 0;
 		});
 
@@ -393,7 +394,7 @@ class Game extends hxd.App {
 					tt.dy = -(tt.height >> 1);
 					var c = new Shuriken(tt);
 					all.push(c);
-					c.anim.filters = tf.filters;
+					c.anim.filter = tf.filter;
 					c.x = tf.calcTextWidth(txt.substr(0,i)) + tf.x + (tt.width>>1) + t.t.dx;
 					c.y = tf.y + (tt.height >> 1) + t.t.dy;
 					event.wait(0.5 + Math.random() * 0.3 + i * 0.05, function() {
@@ -403,7 +404,7 @@ class Game extends hxd.App {
 					});
 				}
 			}
-			event.waitUntil(function(dt) {
+			event.waitUntil(function(_) {
 				for( a in all )
 					if( a.anim.parent == null )
 						all.remove(a);
@@ -443,7 +444,7 @@ class Game extends hxd.App {
 				return true;
 			}
 
-			t += dt * speed;
+			t += (dt*60) * speed;
 			var k = Std.int(t);
 			if( k != prev && prev < str.length ) {
 				prev = k;
@@ -522,7 +523,7 @@ class Game extends hxd.App {
 				var k = 0;
 				var room = hxd.Res.room.getPixels().sub(0, 0, 245, collide.height);
 				event.waitUntil(function(dt) {
-					dx += dt * 2;
+					dx += dt * 120;
 					var change = false;
 					while( dx > 1 ) {
 						k++;
@@ -564,7 +565,7 @@ class Game extends hxd.App {
 		shake(0.2, 7.5, function() return speed / 0.03);
 
 		event.waitUntil(function(dt) {
-
+			dt *= 60;
 
 			var p = root.localToGlobal(new h2d.col.Point(hero.x, hero.y));
 			rotate.rotation += speed * dt * way;
@@ -601,7 +602,7 @@ class Game extends hxd.App {
 	function shake(v = 1., time = 0.3, ?dynSpeed : Void -> Float) {
 		var baseY = -s2d.height >> 1;
 		event.waitUntil(function(dt) {
-			time -= dt / 60;
+			time -= dt;
 			if( time < 0 ) {
 				root.y = baseY;
 				return true;
@@ -671,7 +672,7 @@ class Game extends hxd.App {
 
 		event.update(dt);
 		for( e in entities.copy() )
-			e.update(dt);
+			e.update(dt*60);
 
 		s2d.ysort(2);
 	}

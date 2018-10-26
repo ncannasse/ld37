@@ -27,11 +27,11 @@ class ComputerPlay extends Entity {
 		anim.rotate( -1.5);
 		anim.x = 20;
 		anim.y = 240;
-		anim.filters = [new h2d.filter.Glow(Game.DARK, 0.)];
+		anim.filter = new h2d.filter.Glow(Game.DARK, 0.);
 		anim.addShader(new SkewShader());
 		anim.alpha = 0;
 		game.event.waitUntil(function(dt) {
-			anim.alpha += dt * 0.01;
+			anim.alpha += dt * 0.6;
 			if( anim.alpha > 1 ) {
 				anim.alpha = 1;
 				wait();
@@ -67,7 +67,7 @@ class ComputerPlay extends Entity {
 		var t = 0.;
 		var pos = 0;
 		game.event.waitUntil(function(dt) {
-			t += dt;
+			t += dt*60;
 			if( t > 1 ) {
 				t--;
 				if( pos >= s.length ) {
@@ -178,7 +178,7 @@ class ComputerPlay extends Entity {
 
 								game.event.wait(1, function() {
 									game.event.waitUntil(function(dt) {
-										anim.alpha -= 0.01 * dt;
+										anim.alpha -= 0.6 * dt;
 										if( anim.alpha < 0 ) return true;
 										return false;
 									});
