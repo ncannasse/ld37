@@ -167,8 +167,8 @@ class Game extends hxd.App {
 		var t = hxd.Res.room2P.toTile();
 		var K = 128;
 		t = t.sub(0, 0, t.width * (K + 1), t.height * (K + 1));
-		t.dx = -(t.width) >> 1;
-		t.dy = -(t.height) >> 1;
+		t.dx = -(t.iwidth) >> 1;
+		t.dy = -(t.iheight) >> 1;
 
 		var title = new h2d.Object(s2d);
 
@@ -239,13 +239,13 @@ class Game extends hxd.App {
 
 		tx = new h2d.Bitmap(hxd.Res.title.toTile(), title);
 
-		tx.x = (s2d.width - tx.tile.width) >> 1;
+		tx.x = (s2d.width - tx.tile.iwidth) >> 1;
 		tx.y = 100;
 		tx.blendMode = Multiply;
 
 		var start = new h2d.Text(hxd.res.DefaultFont.get(), title);
 		start.text = "Click to start";
-		start.x = (s2d.width - start.textWidth) >> 1;
+		start.x = Std.int(s2d.width - start.textWidth) >> 1;
 		start.y = 250;
 		start.alpha = 0.5;
 		start.textColor = DARK;
@@ -390,13 +390,13 @@ class Game extends hxd.App {
 				var t = tf.font.getChar(c);
 				if( c != " ".code ) {
 					var tt = t.t.clone();
-					tt.dx = -(tt.width >> 1);
-					tt.dy = -(tt.height >> 1);
+					tt.dx = -(tt.iwidth >> 1);
+					tt.dy = -(tt.iheight >> 1);
 					var c = new Shuriken(tt);
 					all.push(c);
 					c.anim.filter = tf.filter;
-					c.x = tf.calcTextWidth(txt.substr(0,i)) + tf.x + (tt.width>>1) + t.t.dx;
-					c.y = tf.y + (tt.height >> 1) + t.t.dy;
+					c.x = tf.calcTextWidth(txt.substr(0,i)) + tf.x + (tt.iwidth>>1) + t.t.dx;
+					c.y = tf.y + (tt.iheight >> 1) + t.t.dy;
 					event.wait(0.5 + Math.random() * 0.3 + i * 0.05, function() {
 						shake();
 						c.rotSpeed = 1e-9;

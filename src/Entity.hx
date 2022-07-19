@@ -40,14 +40,14 @@ class Entity {
 		var iy = Std.int(y - hy);
 
 		if( game.hero.anim.scaleX < 0 )
-			ix = f.width - ix;
+			ix = f.iwidth - ix;
 
 
 		if( ix < 0 || ix >= f.width )
 			return false;
 		if( iy < 0 || iy >= f.height )
 			return false;
-		if( (game.bitmap.getPixel(f.x + ix, f.y + iy) >>> 24) == 0 )
+		if( (game.bitmap.getPixel(f.ix + ix, f.iy + iy) >>> 24) == 0 )
 			return false;
 
 		game.hero.die(hx + ix, hy + iy, dx, dy);
